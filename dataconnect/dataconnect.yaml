@@ -1,0 +1,10 @@
+specVersion: "v1alpha"
+serviceId: "venture"
+location: "us-central1"
+schema:
+  source: "./schema.sql"
+  datasource:
+    postgresql:
+      database: "venture"
+      cloudSql:
+        instanceId: "venture-db"
