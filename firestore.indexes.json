@@ -1,0 +1,44 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "trips",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId",         "order": "ASCENDING" },
+        { "fieldPath": "firstStartDate", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "destinations",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "tripId",     "order": "ASCENDING" },
+        { "fieldPath": "sortOrder",  "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "spots",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        { "fieldPath": "hiddennessScore", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "dayPlans",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "destinationId", "order": "ASCENDING" },
+        { "fieldPath": "dayNumber",     "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "dayPlanSpots",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "dayPlanId",  "order": "ASCENDING" },
+        { "fieldPath": "sortOrder",  "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

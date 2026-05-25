@@ -27,11 +27,15 @@
     "source": "functions",
     "runtime": "nodejs20"
   },
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
   "emulators": {
-    "auth": { "port": 9099 },
+    "auth":      { "port": 9099 },
     "functions": { "port": 5001 },
-    "hosting": { "port": 5000 },
-    "dataconnect": { "port": 9399 },
+    "firestore": { "port": 8080 },
+    "hosting":   { "port": 5000 },
     "ui": { "enabled": true }
   }
 }
