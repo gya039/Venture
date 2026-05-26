@@ -8,28 +8,26 @@ import { upsertUser } from '@/lib/db';
 const CACHE_KEY = 'venture_uid';
 
 export function useAuth() {
-  // Seed from localStorage instantly — no network wait on repeat visits
-  const [user,      setUser]      = useState(() => {
-    if (typeof window === 'undefined') return undefined;
-    try {
-      const uid = localStorage.getItem(CACHE_KEY);
-      return uid ? { uid, _cached: true } : undefined;
-    } catch { return undefined; }
-  });
+  // Always start undefined — same on server and client first render (no hydration mismatch)
+  const [user,      setUser]      = useState(undefined);
   const [loading,   setLoading]   = useState(true);
-  // authReady = true once Firebase has confirmed the session (safe for Firestore writes)
+  // authReady = true only once Firebase has confirmed the session (safe for Firestore writes)
   const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
+    // Seed from localStorage after mount (client-only, never runs on server)
+    try {
+      const uid = localStorage.getItem(CACHE_KEY);
+      if (uid) {
+        setUser({ uid, _cached: true });
+        setLoading(false); // show content instantly on repeat visits
+      }
+    } catch {}
+
     if (!auth) {
       setUser(null);
       setLoading(false);
       return;
-    }
-
-    // If we had a cached uid, stop showing the spinner immediately
-    if (typeof window !== 'undefined' && localStorage.getItem(CACHE_KEY)) {
-      setLoading(false);
     }
 
     const timeout = setTimeout(() => {
@@ -41,7 +39,6 @@ export function useAuth() {
       clearTimeout(timeout);
       if (firebaseUser) {
         try { localStorage.setItem(CACHE_KEY, firebaseUser.uid); } catch {}
-        // Fire-and-forget — don't block the UI waiting for Firestore upsert
         upsertUser(firebaseUser.uid, firebaseUser.email).catch(() => {});
         setUser(firebaseUser);
       } else {

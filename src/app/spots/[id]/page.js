@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { getSpot, getDayPlans, addSpotToDayPlan } from '@/lib/db';
 import { getHiddennessLevel } from '@/constants/hiddenness';
 import { INTERESTS } from '@/constants/interests';
-import BottomNav from '@/components/BottomNav';
+
 
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
 function fmtDate(iso) {
@@ -438,7 +438,7 @@ export default function SpotDetailPage() {
         </div>
       )}
 
-      <BottomNav />
+      </div>
     </div>
   );
 }
