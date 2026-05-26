@@ -14,8 +14,9 @@ const TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
  *   centerLng      {number}
  *   onSpotClick    {fn}        Called with spot when a marker is tapped
  *   filterInterest {string}    Hides pins not matching this interest
+ *   focusSpotId    {string}    When this changes, fly to that spot + highlight its pin
  */
-export default function MapView({ spots = [], centerLat, centerLng, onSpotClick, filterInterest = '' }) {
+export default function MapView({ spots = [], centerLat, centerLng, onSpotClick, filterInterest = '', focusSpotId = null }) {
   const containerRef = useRef(null);
   const mapRef       = useRef(null);
   const markersRef   = useRef([]);
@@ -53,6 +54,9 @@ export default function MapView({ spots = [], centerLat, centerLng, onSpotClick,
     };
   }, []); // eslint-disable-line
 
+  // Store spot→element map so we can highlight the focused pin
+  const markerElemsRef = useRef({}); // spotId → DOM element
+
   /* ── Update markers ───────────────────────────────────────────────────── */
   useEffect(() => {
     const map = mapRef.current;
@@ -61,6 +65,7 @@ export default function MapView({ spots = [], centerLat, centerLng, onSpotClick,
     import('mapbox-gl').then(({ default: mapboxgl }) => {
       markersRef.current.forEach(m => m.remove());
       markersRef.current = [];
+      markerElemsRef.current = {};
 
       const visible = filterInterest
         ? spots.filter(s => (s.interests ?? []).includes(filterInterest))
@@ -69,45 +74,67 @@ export default function MapView({ spots = [], centerLat, centerLng, onSpotClick,
       visible.forEach(spot => {
         if (!spot.lat || !spot.lng || spot.coordsMissing) return;
         const level = getHiddennessLevel(spot.hiddennessScore ?? 1);
+        const isFocused = spot.id === focusSpotId;
 
         const el = document.createElement('div');
         Object.assign(el.style, {
-          width: '28px', height: '28px', borderRadius: '50%',
-          background: level.color,
-          border: '2px solid rgba(0,0,0,0.5)',
-          boxShadow: `0 0 10px ${level.color}80, 0 2px 6px rgba(0,0,0,0.5)`,
-          cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: '10px', fontWeight: '700', color: '#000',
-          transition: 'transform 0.15s ease',
-          userSelect: 'none',
+          width:        isFocused ? '34px' : '26px',
+          height:       isFocused ? '34px' : '26px',
+          borderRadius: '50%',
+          background:   level.color,
+          border:       isFocused ? '2px solid #fff' : '2px solid rgba(0,0,0,0.4)',
+          boxShadow:    isFocused
+            ? `0 0 0 3px ${level.color}60, 0 0 18px ${level.color}80, 0 2px 8px rgba(0,0,0,0.5)`
+            : `0 0 8px ${level.color}60, 0 2px 4px rgba(0,0,0,0.4)`,
+          cursor:       'pointer',
+          display:      'flex',
+          alignItems:   'center',
+          justifyContent: 'center',
+          fontSize:     isFocused ? '11px' : '10px',
+          fontWeight:   '700',
+          color:        '#000',
+          transition:   'all 0.2s ease',
+          userSelect:   'none',
+          zIndex:       isFocused ? '10' : '1',
         });
-        el.textContent        = spot.hiddennessScore;
-        el.onmouseenter       = () => (el.style.transform = 'scale(1.35)');
-        el.onmouseleave       = () => (el.style.transform = 'scale(1)');
-        el.onclick            = () => onSpotClick?.(spot);
+        el.textContent  = spot.hiddennessScore;
+        el.onmouseenter = () => { if (spot.id !== focusSpotId) el.style.transform = 'scale(1.3)'; };
+        el.onmouseleave = () => { if (spot.id !== focusSpotId) el.style.transform = 'scale(1)'; };
+        el.onclick      = () => onSpotClick?.(spot);
 
         const marker = new mapboxgl.Marker({ element: el })
           .setLngLat([spot.lng, spot.lat])
           .addTo(map);
         markersRef.current.push(marker);
+        markerElemsRef.current[spot.id] = el;
       });
 
-      // Fit bounds to visible spots
-      const withCoords = visible.filter(s => s.lat && s.lng && !s.coordsMissing);
-      if (withCoords.length > 1) {
-        const lats = withCoords.map(s => s.lat);
-        const lngs = withCoords.map(s => s.lng);
-        map.fitBounds(
-          [[Math.min(...lngs) - 0.005, Math.min(...lats) - 0.005],
-           [Math.max(...lngs) + 0.005, Math.max(...lats) + 0.005]],
-          { padding: 60, maxZoom: 15, duration: 600 }
-        );
-      } else if (withCoords.length === 1) {
-        map.flyTo({ center: [withCoords[0].lng, withCoords[0].lat], zoom: 14 });
+      // Fit bounds to all visible spots (only on initial load, not focus change)
+      if (!focusSpotId) {
+        const withCoords = visible.filter(s => s.lat && s.lng && !s.coordsMissing);
+        if (withCoords.length > 1) {
+          const lats = withCoords.map(s => s.lat);
+          const lngs = withCoords.map(s => s.lng);
+          map.fitBounds(
+            [[Math.min(...lngs) - 0.005, Math.min(...lats) - 0.005],
+             [Math.max(...lngs) + 0.005, Math.max(...lats) + 0.005]],
+            { padding: 60, maxZoom: 15, duration: 600 }
+          );
+        } else if (withCoords.length === 1) {
+          map.flyTo({ center: [withCoords[0].lng, withCoords[0].lat], zoom: 14 });
+        }
       }
     });
-  }, [spots, ready, filterInterest, onSpotClick]);
+  }, [spots, ready, filterInterest, onSpotClick]); // eslint-disable-line
+
+  /* ── Fly to focused spot ──────────────────────────────────────────────── */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready || !focusSpotId) return;
+    const spot = spots.find(s => s.id === focusSpotId);
+    if (!spot?.lat || !spot?.lng || spot.coordsMissing) return;
+    map.flyTo({ center: [spot.lng, spot.lat], zoom: 15, duration: 500 });
+  }, [focusSpotId, ready]); // eslint-disable-line
 
   /* ── Error / loading states ───────────────────────────────────────────── */
   if (mapErr === 'no-token') {
