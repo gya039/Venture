@@ -1,26 +1,58 @@
 {
-  "name": "Venture",
+  "name": "Venture — Hidden Gems Travel Planner",
   "short_name": "Venture",
-  "description": "Hidden gems travel planner",
+  "description": "Discover the places most tourists never find. AI-powered hidden gems for every trip.",
   "start_url": "/",
   "display": "standalone",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
   "background_color": "#0a0a0a",
   "theme_color": "#0a0a0a",
+  "categories": ["travel", "lifestyle"],
+  "lang": "en",
+  "scope": "/",
   "icons": [
+    {
+      "src": "/icons/favicon-16.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/favicon-32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
     {
       "src": "/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
-  "categories": ["travel", "lifestyle"],
-  "lang": "en"
+  "shortcuts": [
+    {
+      "name": "New Trip",
+      "short_name": "New trip",
+      "description": "Plan a new trip",
+      "url": "/trips/new",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
 }

@@ -108,11 +108,22 @@ async function assembleTrips(tripDocs) {
         id:          trip.id,
         name:        trip.name ?? null,
         isMultiCity: trip.isMultiCity ?? false,
+        interests:   trip.interests ?? [],
         createdAt:   toISO(trip.createdAt),
         destinations,
       };
     })
   );
+}
+
+/**
+ * Fetch a single trip by ID (with its destinations assembled).
+ */
+export async function getTrip(tripId) {
+  const snap = await getDoc(doc(db, 'trips', tripId));
+  if (!snap.exists()) return null;
+  const [trip] = await assembleTrips([snap]);
+  return trip;
 }
 
 /**
@@ -160,7 +171,7 @@ export function listenTrips(userId, onUpdate, onError) {
  *   startDate: 'YYYY-MM-DD', endDate: 'YYYY-MM-DD'
  * }]
  */
-export async function createTrip({ userId, name, isMultiCity, destinations }) {
+export async function createTrip({ userId, name, isMultiCity, interests, destinations }) {
   const batch = writeBatch(db);
 
   // Trip doc
@@ -168,10 +179,11 @@ export async function createTrip({ userId, name, isMultiCity, destinations }) {
   const firstStartDate = toTimestamp(destinations[0].startDate);
   batch.set(tripRef, {
     userId,
-    name: name ?? null,
+    name:        name ?? null,
     isMultiCity: isMultiCity ?? false,
+    interests:   interests ?? [],
     firstStartDate,
-    createdAt: serverTimestamp(),
+    createdAt:   serverTimestamp(),
   });
 
   // Destination docs
@@ -272,6 +284,14 @@ export async function getDestinationWithSpots(destinationId) {
 
   const spots = await getCachedSpots(dest.city);
   return { destination: dest, spots };
+}
+
+/**
+ * Fetch a single spot from the city cache.
+ */
+export async function getSpot(city, spotId) {
+  const snap = await getDoc(doc(db, 'citySpots', city, 'spots', spotId));
+  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
 }
 
 // ---------------------------------------------------------------------------

@@ -4,7 +4,6 @@
 export const dynamic = 'force-dynamic';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
@@ -28,7 +27,6 @@ function GoogleIcon() {
 }
 
 export default function AuthPage() {
-  const router = useRouter();
   const [mode, setMode]       = useState('signin'); // 'signin' | 'signup'
   const [email, setEmail]     = useState('');
   const [password, setPassword] = useState('');
@@ -45,11 +43,18 @@ export default function AuthPage() {
       'auth/email-already-in-use':   'An account with that email already exists.',
       'auth/weak-password':          'Password must be at least 6 characters.',
       'auth/invalid-email':          'Please enter a valid email address.',
-      'auth/popup-closed-by-user':   'Sign-in popup closed. Please try again.',
-      'auth/network-request-failed': 'Network error. Check your connection.',
+      'auth/popup-closed-by-user':    'Sign-in popup closed. Please try again.',
+      'auth/network-request-failed':  'Network error. Check your connection.',
+      'auth/operation-not-allowed':   'Email/password sign-in is not enabled. Enable it in Firebase Console → Authentication → Sign-in method.',
+      'auth/configuration-not-found': 'Firebase Auth is not configured. Check your .env.local keys.',
+      'auth/too-many-requests':       'Too many attempts. Please wait a moment and try again.',
+      'auth/internal-error':          'Firebase internal error. Check the browser console for details.',
     };
-    return map[code] ?? 'Something went wrong. Please try again.';
+    return map[code] ?? `Error: ${code ?? 'unknown'}`;
   };
+
+  // Use full-page navigation to avoid Next.js 16 HMR router race condition
+  const goToDashboard = () => { window.location.href = '/'; };
 
   const handleEmailAuth = async (e) => {
     e.preventDefault();
@@ -61,11 +66,10 @@ export default function AuthPage() {
       } else {
         await createUserWithEmailAndPassword(auth, email, password);
       }
-      router.push('/');
+      goToDashboard();
     } catch (err) {
       setError(friendlyError(err.code));
-    } finally {
-      setLoading(false);
+      setLoading(false); // only reset on error — success navigates away
     }
   };
 
@@ -74,10 +78,9 @@ export default function AuthPage() {
     setLoading(true);
     try {
       await signInWithPopup(auth, googleProvider);
-      router.push('/');
+      goToDashboard();
     } catch (err) {
       setError(friendlyError(err.code));
-    } finally {
       setLoading(false);
     }
   };

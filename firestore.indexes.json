@@ -17,13 +17,6 @@
       ]
     },
     {
-      "collectionGroup": "spots",
-      "queryScope": "COLLECTION_GROUP",
-      "fields": [
-        { "fieldPath": "hiddennessScore", "order": "DESCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "dayPlans",
       "queryScope": "COLLECTION",
       "fields": [
