@@ -9,14 +9,16 @@ const CACHE_KEY = 'venture_uid';
 
 export function useAuth() {
   // Seed from localStorage instantly — no network wait on repeat visits
-  const [user,    setUser]    = useState(() => {
+  const [user,      setUser]      = useState(() => {
     if (typeof window === 'undefined') return undefined;
     try {
       const uid = localStorage.getItem(CACHE_KEY);
       return uid ? { uid, _cached: true } : undefined;
     } catch { return undefined; }
   });
-  const [loading, setLoading] = useState(true);
+  const [loading,   setLoading]   = useState(true);
+  // authReady = true once Firebase has confirmed the session (safe for Firestore writes)
+  const [authReady, setAuthReady] = useState(false);
 
   useEffect(() => {
     if (!auth) {
@@ -46,11 +48,12 @@ export function useAuth() {
         try { localStorage.removeItem(CACHE_KEY); } catch {}
         setUser(null);
       }
+      setAuthReady(true);
       setLoading(false);
     });
 
     return () => { clearTimeout(timeout); unsub(); };
   }, []);
 
-  return { user, loading };
+  return { user, loading, authReady };
 }

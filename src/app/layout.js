@@ -1,6 +1,7 @@
 import { Inter } from 'next/font/google';
 import './globals.css';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import DevSwKiller from '@/components/DevSwKiller';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -53,7 +54,10 @@ export default function RootLayout({ children }) {
         <meta name="apple-mobile-web-app-title" content="Venture" />
         <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        {process.env.NODE_ENV === 'development' && <DevSwKiller />}
+      </body>
     </html>
   );
 }

@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { useAuth } from '@/hooks/useAuth';
-import BottomNav from '@/components/BottomNav';
+import Sidebar from '@/components/Sidebar';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -15,72 +15,105 @@ export default function SettingsPage() {
     router.push('/auth');
   };
 
-  const row = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '14px 0',
-    borderBottom: '1px solid var(--border)',
-    color: 'var(--text-primary)',
-    fontSize: '0.9rem',
-  };
-
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--bg)', paddingBottom: '80px' }}>
-      <header style={{ padding: '20px', paddingTop: 'calc(20px + env(safe-area-inset-top))' }}>
-        <h1 style={{ fontSize: '1.4rem', fontWeight: 700 }}>Settings</h1>
-      </header>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)' }}>
+      <Sidebar />
 
-      <div style={{ padding: '0 20px' }}>
+      <main style={{ flex: 1, minWidth: 0, padding: '40px 48px', maxWidth: 640 }}>
+
+        <div style={{ marginBottom: 40 }}>
+          <h1 style={{ fontSize: '1.6rem', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 4 }}>Settings</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Manage your account and preferences</p>
+        </div>
 
         {/* Account */}
-        <p style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '2px' }}>Account</p>
-        <div style={row}>
-          <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-            {user?.email ?? '—'}
-          </span>
-        </div>
+        <section style={{ marginBottom: 32 }}>
+          <p style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Account</p>
+          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 2 }}>Email</p>
+                <p style={{ fontSize: '0.9rem', fontWeight: 500 }}>{user?.email ?? '—'}</p>
+              </div>
+            </div>
+          </div>
+        </section>
 
         {/* Preferences */}
-        <p style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '24px', marginBottom: '2px' }}>Preferences</p>
-        <div style={row}>
-          <span>Currency</span>
-          <span style={{ color: 'var(--text-secondary)' }}>GBP £ ›</span>
-        </div>
-        <div style={row}>
-          <span>Default interests</span>
-          <span style={{ color: 'var(--text-secondary)' }}>›</span>
-        </div>
+        <section style={{ marginBottom: 32 }}>
+          <p style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Preferences</p>
+          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+            {[
+              { label: 'Currency', value: 'GBP £' },
+              { label: 'Default interests', value: 'Not set' },
+            ].map(({ label, value }, i, arr) => (
+              <div key={label} style={{
+                padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none',
+                cursor: 'pointer',
+              }}>
+                <span style={{ fontSize: '0.9rem' }}>{label}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                  {value}
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
 
         {/* Research */}
-        <p style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: '24px', marginBottom: '2px' }}>Research</p>
-        <div style={row}>
-          <div>
-            <p>Clear cached research</p>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '2px' }}>Forces re-fetch on next visit to each city</p>
+        <section style={{ marginBottom: 32 }}>
+          <p style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Research</p>
+          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <p style={{ fontSize: '0.9rem', fontWeight: 500, marginBottom: 2 }}>Clear cached research</p>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Forces re-fetch on next visit to each city</p>
+            </div>
+            <button style={{
+              background: 'none', border: '1px solid var(--border)', borderRadius: 7,
+              color: 'var(--text-secondary)', padding: '7px 14px',
+              fontSize: '0.8rem', cursor: 'pointer', fontWeight: 500,
+            }}>
+              Clear
+            </button>
           </div>
-          <button style={{ background: 'none', border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--text-secondary)', padding: '6px 10px', fontSize: '0.78rem', cursor: 'pointer' }}>
-            Clear
-          </button>
-        </div>
+        </section>
 
-        {/* Auth */}
-        <div style={{ marginTop: '32px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <button
-            onClick={handleSignOut}
-            style={{ background: 'none', border: 'none', color: 'var(--accent)', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer', textAlign: 'left', padding: '4px 0' }}
-          >
-            Sign out →
-          </button>
-          <button
-            style={{ background: 'none', border: 'none', color: 'var(--error)', fontWeight: 500, fontSize: '0.85rem', cursor: 'pointer', textAlign: 'left', padding: '4px 0' }}
-          >
-            Delete account →
-          </button>
-        </div>
-      </div>
+        {/* Danger zone */}
+        <section>
+          <p style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Account actions</p>
+          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+            <button
+              onClick={handleSignOut}
+              style={{
+                width: '100%', background: 'none', border: 'none',
+                padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                color: 'var(--accent)', fontWeight: 600, fontSize: '0.9rem', cursor: 'pointer',
+                borderBottom: '1px solid var(--border)', textAlign: 'left',
+              }}
+            >
+              Sign out
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </button>
+            <button style={{
+              width: '100%', background: 'none', border: 'none',
+              padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              color: 'var(--error)', fontWeight: 500, fontSize: '0.875rem', cursor: 'pointer', textAlign: 'left',
+            }}>
+              Delete account
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          </div>
+        </section>
 
-      <BottomNav />
+      </main>
     </div>
   );
 }

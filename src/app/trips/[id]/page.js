@@ -13,7 +13,7 @@ import ResearchLoader from '@/components/ResearchLoader';
 import CountdownBadge from '@/components/CountdownBadge';
 import DayPlanColumn from '@/components/DayPlanColumn';
 import DayPassCalculator from '@/components/DayPassCalculator';
-import BottomNav from '@/components/BottomNav';
+import Sidebar from '@/components/Sidebar';
 import { INTERESTS } from '@/constants/interests';
 
 /* ── Date helpers ─────────────────────────────────────────────────────────── */
@@ -55,8 +55,8 @@ function Tab({ label, active, onClick }) {
 
 /* ── Main page ────────────────────────────────────────────────────────────── */
 export default function TripDetailPage() {
-  const { id: tripId }  = useParams();
-  const { user }        = useAuth();
+  const { id: tripId }      = useParams();
+  const { user, authReady } = useAuth();
 
   const [trip,           setTrip]          = useState(null);
   const [tripLoading,    setTripLoading]   = useState(true);
@@ -75,7 +75,7 @@ export default function TripDetailPage() {
 
   /* ── Load trip ──────────────────────────────────────────────────────────── */
   useEffect(() => {
-    if (!tripId) return;
+    if (!tripId || !authReady) return;
     getTrip(tripId)
       .then((t) => {
         setTrip(t);
@@ -83,7 +83,7 @@ export default function TripDetailPage() {
       })
       .catch((err) => setTripError(err.message))
       .finally(() => setTripLoading(false));
-  }, [tripId]);
+  }, [tripId, authReady]);
 
   /* ── Destination + spots ────────────────────────────────────────────────── */
   const selectedDest = trip?.destinations?.[selectedIdx] ?? null;
@@ -132,19 +132,25 @@ export default function TripDetailPage() {
   );
 
   /* ── Loading / error shell ──────────────────────────────────────────────── */
-  if (tripLoading) {
+  if (tripLoading || !authReady) {
     return (
-      <div style={{ minHeight: '100dvh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Loading…</div>
+      <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)' }}>
+        <Sidebar />
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Loading…</div>
+        </div>
       </div>
     );
   }
 
   if (tripError || !trip) {
     return (
-      <div style={{ minHeight: '100dvh', background: 'var(--bg)', padding: '40px 20px', textAlign: 'center' }}>
-        <p style={{ color: 'var(--text-muted)' }}>{tripError ?? 'Trip not found.'}</p>
-        <Link href="/" style={{ color: 'var(--accent)', fontSize: '0.85rem', marginTop: '12px', display: 'inline-block' }}>← Back to trips</Link>
+      <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)' }}>
+        <Sidebar />
+        <div style={{ flex: 1, padding: '40px 48px' }}>
+          <p style={{ color: 'var(--text-muted)' }}>{tripError ?? 'Trip not found.'}</p>
+          <Link href="/" style={{ color: 'var(--accent)', fontSize: '0.85rem', marginTop: '12px', display: 'inline-block' }}>← Back to trips</Link>
+        </div>
       </div>
     );
   }
@@ -160,13 +166,12 @@ export default function TripDetailPage() {
 
   /* ── Render ─────────────────────────────────────────────────────────────── */
   return (
-    <div style={{ minHeight: '100dvh', background: 'var(--bg)', paddingBottom: 'calc(var(--nav-height) + env(safe-area-inset-bottom))' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)' }}>
+      <Sidebar />
+    <div style={{ flex: 1, minWidth: 0, maxWidth: 860, paddingBottom: 48 }}>
 
       {/* ── Header ──────────────────────────────────────────────────────── */}
-      <header style={{
-        padding:    '16px 20px 0',
-        paddingTop: 'calc(16px + env(safe-area-inset-top))',
-      }}>
+      <header style={{ padding: '40px 48px 0' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
           <Link href="/" style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>← Trips</Link>
           <Link
@@ -243,7 +248,7 @@ export default function TripDetailPage() {
       </header>
 
       {/* ── Tab content ─────────────────────────────────────────────────── */}
-      <main style={{ padding: '20px' }}>
+      <main style={{ padding: '24px 48px' }}>
 
         {/* ════════════════ RESEARCH TAB ════════════════ */}
         {activeTab === 'Research' && (
@@ -536,7 +541,7 @@ export default function TripDetailPage() {
         </div>
       )}
 
-      <BottomNav />
+    </div>
     </div>
   );
 }

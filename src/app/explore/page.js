@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import BottomNav from '@/components/BottomNav';
+import Sidebar from '@/components/Sidebar';
 
 const FEATURED = [
   { city: 'Amsterdam', country: 'Netherlands', flag: '🇳🇱', gems: 24, tag: 'Canals & Culture' },
@@ -12,65 +12,48 @@ const FEATURED = [
   { city: 'Budapest',  country: 'Hungary',     flag: '🇭🇺', gems: 27, tag: 'Baths & Ruin Bars' },
   { city: 'Berlin',    country: 'Germany',     flag: '🇩🇪', gems: 40, tag: 'Underground & Art' },
   { city: 'Rome',      country: 'Italy',       flag: '🇮🇹', gems: 33, tag: 'Ancient & Food' },
-  { city: 'Copenhagen', country: 'Denmark',    flag: '🇩🇰', gems: 19, tag: 'Design & Hygge' },
+  { city: 'Copenhagen', country: 'Denmark',   flag: '🇩🇰', gems: 19, tag: 'Design & Hygge' },
   { city: 'Tokyo',     country: 'Japan',       flag: '🇯🇵', gems: 48, tag: 'Chaos & Calm' },
   { city: 'Kyoto',     country: 'Japan',       flag: '🇯🇵', gems: 29, tag: 'Temples & Zen' },
   { city: 'Porto',     country: 'Portugal',    flag: '🇵🇹', gems: 21, tag: 'Wine & Tiles' },
 ];
 
 const GRADIENTS = [
-  ['#f59e0b','#ef4444'], ['#3b82f6','#8b5cf6'], ['#10b981','#3b82f6'],
-  ['#f59e0b','#f97316'], ['#ec4899','#8b5cf6'], ['#14b8a6','#22c55e'],
+  ['#f59e0b', '#ef4444'], ['#3b82f6', '#8b5cf6'], ['#10b981', '#3b82f6'],
+  ['#f59e0b', '#f97316'], ['#ec4899', '#8b5cf6'], ['#14b8a6', '#22c55e'],
 ];
 function grad(city) {
-  const i = city.split('').reduce((a,c) => a + c.charCodeAt(0), 0) % GRADIENTS.length;
+  const i = city.split('').reduce((a, c) => a + c.charCodeAt(0), 0) % GRADIENTS.length;
   return GRADIENTS[i];
 }
 
 export default function ExplorePage() {
   return (
-    <div style={{
-      minHeight: '100dvh', background: 'var(--bg)',
-      paddingBottom: 'calc(80px + env(safe-area-inset-bottom))',
-    }}>
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)' }}>
+      <Sidebar />
 
-      {/* Header */}
-      <header style={{
-        padding: '0 20px',
-        paddingTop: 'calc(18px + env(safe-area-inset-top))',
-        paddingBottom: 18,
-        borderBottom: '1px solid var(--border)',
-        position: 'sticky', top: 0, zIndex: 50,
-        background: 'rgba(10,10,10,0.92)',
-        backdropFilter: 'blur(16px)',
-      }}>
-        <h1 style={{ fontSize: '1.15rem', fontWeight: 700, letterSpacing: '-0.02em' }}>Explore</h1>
-        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 3 }}>
-          Popular destinations with hidden gems ready to discover
-        </p>
-      </header>
+      <main style={{ flex: 1, minWidth: 0, padding: '40px 48px' }}>
 
-      <main style={{ padding: '20px 16px' }}>
+        <div style={{ marginBottom: 32 }}>
+          <h1 style={{ fontSize: '1.6rem', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 4 }}>Explore</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Popular destinations with hidden gems ready to discover</p>
+        </div>
 
         {/* Search hint */}
         <div style={{
           display: 'flex', alignItems: 'center', gap: 10,
-          padding: '12px 14px', background: 'var(--card)',
-          border: '1px solid var(--border)', borderRadius: 12,
-          marginBottom: 20, color: 'var(--text-muted)', fontSize: '0.85rem',
+          padding: '12px 16px', background: 'var(--card)',
+          border: '1px solid var(--border)', borderRadius: 10,
+          marginBottom: 28, color: 'var(--text-muted)', fontSize: '0.85rem',
         }}>
-          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{ flexShrink: 0 }}>
+          <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} style={{ flexShrink: 0 }}>
             <circle cx="11" cy="11" r="8" /><path strokeLinecap="round" d="M21 21l-4.35-4.35" />
           </svg>
-          <span>Search coming soon — start a trip to research any city</span>
+          Search coming soon — click any city to start planning, or create a custom trip for anywhere
         </div>
 
         {/* City grid */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
-          gap: 10,
-        }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12, marginBottom: 32 }}>
           {FEATURED.map(dest => {
             const [c1, c2] = grad(dest.city);
             return (
@@ -79,37 +62,34 @@ export default function ExplorePage() {
                 href={`/trips/new?city=${encodeURIComponent(dest.city)}`}
                 style={{ textDecoration: 'none' }}
               >
-                <div style={{
-                  background: 'var(--card)', border: '1px solid var(--border)',
-                  borderRadius: 14, overflow: 'hidden', cursor: 'pointer',
-                  transition: 'transform 0.15s, border-color 0.15s',
-                }}
+                <div
+                  style={{
+                    background: 'var(--card)', border: '1px solid var(--border)',
+                    borderRadius: 12, overflow: 'hidden', cursor: 'pointer',
+                    transition: 'transform 0.15s, border-color 0.15s',
+                  }}
                   onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = 'rgba(245,158,11,0.3)'; }}
                   onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
                 >
-                  {/* Gradient top */}
                   <div style={{
-                    height: 64,
+                    height: 72,
                     background: `linear-gradient(135deg, ${c1}33, ${c2}44)`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '2rem',
-                    position: 'relative',
+                    fontSize: '2rem', position: 'relative',
                   }}>
                     {dest.flag}
                     <div style={{
                       position: 'absolute', top: 6, right: 8,
-                      fontSize: '0.6rem', fontWeight: 700,
-                      color: c1, background: `${c1}22`,
-                      border: `1px solid ${c1}33`,
-                      borderRadius: 20, padding: '1px 6px',
+                      fontSize: '0.6rem', fontWeight: 700, color: c1,
+                      background: `${c1}22`, border: `1px solid ${c1}33`,
+                      borderRadius: 20, padding: '2px 7px',
                     }}>
                       {dest.gems} gems
                     </div>
                   </div>
-
                   <div style={{ padding: '10px 12px' }}>
-                    <p style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: 2 }}>{dest.city}</p>
-                    <p style={{ fontSize: '0.68rem', color: 'var(--text-muted)', lineHeight: 1.3 }}>{dest.tag}</p>
+                    <p style={{ fontWeight: 600, fontSize: '0.875rem', marginBottom: 2 }}>{dest.city}</p>
+                    <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{dest.tag}</p>
                   </div>
                 </div>
               </Link>
@@ -119,26 +99,26 @@ export default function ExplorePage() {
 
         {/* CTA */}
         <div style={{
-          marginTop: 24, padding: '20px', background: 'var(--card)',
-          border: '1px solid rgba(245,158,11,0.2)', borderRadius: 14, textAlign: 'center',
+          padding: '28px 32px', background: 'var(--card)',
+          border: '1px solid rgba(245,158,11,0.2)', borderRadius: 14,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 24,
         }}>
-          <p style={{ fontWeight: 700, marginBottom: 6, fontSize: '0.9rem' }}>
-            Don't see your city?
-          </p>
-          <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 14, lineHeight: 1.5 }}>
-            Venture works for any city worldwide. Start a trip and our AI will research it.
-          </p>
+          <div>
+            <p style={{ fontWeight: 700, fontSize: '1rem', marginBottom: 4 }}>Don't see your city?</p>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+              Venture works for any city worldwide. Start a trip and our AI will research it.
+            </p>
+          </div>
           <Link href="/trips/new" style={{
-            display: 'inline-block', padding: '10px 22px',
+            flexShrink: 0, padding: '10px 22px',
             background: 'var(--accent)', color: '#000',
-            borderRadius: 10, fontWeight: 700, fontSize: '0.85rem', textDecoration: 'none',
+            borderRadius: 8, fontWeight: 700, fontSize: '0.875rem', textDecoration: 'none',
+            whiteSpace: 'nowrap',
           }}>
             Plan a custom trip →
           </Link>
         </div>
       </main>
-
-      <BottomNav />
     </div>
   );
 }

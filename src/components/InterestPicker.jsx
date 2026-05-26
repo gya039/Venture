@@ -17,6 +17,7 @@ export default function InterestPicker({ selected = [], onChange }) {
       {INTERESTS.map(({ id, icon, label }) => (
         <button
           key={id}
+          type="button"
           onClick={() => toggle(id)}
           style={{
             padding: '8px 12px',
