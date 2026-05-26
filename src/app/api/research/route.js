@@ -100,7 +100,53 @@ export async function POST(request) {
       return NextResponse.json({ error: 'AI returned no spots. Please try again.' }, { status: 500 });
     }
 
-    // Flag missing coordinates but keep the spot
+    // ── Geocode spots via Mapbox ──────────────────────────────────────────
+    // AI-generated lat/lng values are often completely wrong (hallucinated).
+    // We geocode every spot name within a tight bbox around the city centre
+    // so markers always land in the right country/city.
+    const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+    if (mapboxToken) {
+      try {
+        // 1. Resolve city centre coordinates
+        const cityGeoRes = await fetch(
+          `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(city)}.json` +
+          `?types=place&limit=1&access_token=${mapboxToken}`
+        );
+        if (cityGeoRes.ok) {
+          const cityGeoData = await cityGeoRes.json();
+          if (cityGeoData.features?.length > 0) {
+            const [cLng, cLat] = cityGeoData.features[0].center;
+            // 0.35° ≈ 38 km — tight enough to stay in the city, loose enough
+            // for suburban spots.  Mapbox also uses proximity for ranking.
+            const pad  = 0.35;
+            const bbox = [cLng - pad, cLat - pad, cLng + pad, cLat + pad].join(',');
+
+            // 2. Geocode all spots in parallel inside the city bbox
+            spots = await Promise.all(spots.map(async (spot) => {
+              try {
+                const q   = encodeURIComponent(spot.name);
+                const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${q}.json` +
+                            `?proximity=${cLng},${cLat}&bbox=${bbox}` +
+                            `&types=poi,address&limit=1&access_token=${mapboxToken}`;
+                const r = await fetch(url);
+                if (!r.ok) return spot;
+                const d = await r.json();
+                if (d.features?.length > 0) {
+                  const [lng, lat] = d.features[0].center;
+                  return { ...spot, lat, lng, coordsMissing: false };
+                }
+              } catch { /* fall through — keep AI coords */ }
+              return spot;
+            }));
+          }
+        }
+      } catch (geoErr) {
+        // Geocoding is best-effort — research still succeeds without it
+        console.warn('[research] Mapbox geocoding failed, using AI coords:', geoErr.message);
+      }
+    }
+
+    // Flag any spots that still have missing / zero coordinates
     spots = spots.map((s) => ({
       ...s,
       coordsMissing: !s.lat || !s.lng || (s.lat === 0 && s.lng === 0),

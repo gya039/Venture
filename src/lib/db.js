@@ -260,8 +260,19 @@ export async function getCachedSpots(city) {
   return snaps.docs.map((d) => ({ id: d.id, ...d.data() }));
 }
 
-/** Writes an array of spot objects into the citySpots cache */
+/** Writes an array of spot objects into the citySpots cache.
+ *  Deletes any existing spots for the city first so re-research
+ *  replaces stale data instead of stacking duplicates on top. */
 export async function cacheSpots(city, spots) {
+  // 1. Remove old spots (writeBatch supports up to 500 ops; typical cache ≤ 30)
+  const oldSnaps = await getDocs(collection(db, 'citySpots', city, 'spots'));
+  if (oldSnaps.docs.length > 0) {
+    const delBatch = writeBatch(db);
+    oldSnaps.docs.forEach((d) => delBatch.delete(d.ref));
+    await delBatch.commit();
+  }
+
+  // 2. Write new spots
   const batch = writeBatch(db);
   spots.forEach((spot) => {
     const ref = doc(collection(db, 'citySpots', city, 'spots'));
@@ -285,7 +296,6 @@ export async function cacheSpots(city, spots) {
   });
   await batch.commit();
 
-  // Mark destination as researched
   return spots.length;
 }
 
