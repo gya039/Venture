@@ -6,9 +6,85 @@ import { useTrips } from '@/hooks/useTrips';
 import TripCard from '@/components/TripCard';
 import Sidebar from '@/components/Sidebar';
 import InstallBanner from '@/components/InstallBanner';
-import LandingPage from '@/components/LandingPage';
 
-/* ── Dashboard ──────────────────────────────────────────────────────────────── */
+/* ── Guest home (signed out, inside app shell) ──────────────────────────────── */
+function GuestHome() {
+  return (
+    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)' }}>
+      <Sidebar />
+      <main style={{
+        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '40px 24px',
+      }}>
+        <div style={{ maxWidth: 480, textAlign: 'center' }}>
+          {/* Logo mark */}
+          <div style={{
+            width: 64, height: 64, borderRadius: 16, margin: '0 auto 28px',
+            background: 'linear-gradient(135deg, #f59e0b, #f97316)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontWeight: 800, color: '#000', fontSize: '1.6rem',
+            boxShadow: '0 8px 32px rgba(245,158,11,0.3)',
+          }}>V</div>
+
+          <h1 style={{
+            fontSize: '1.9rem', fontWeight: 800, letterSpacing: '-0.03em',
+            marginBottom: 14, color: 'var(--text-primary)',
+          }}>
+            Welcome to Venture
+          </h1>
+          <p style={{
+            color: 'var(--text-secondary)', lineHeight: 1.75,
+            marginBottom: 36, fontSize: '0.975rem',
+          }}>
+            Sign in to plan trips, save hidden gems, and build day-by-day itineraries. AI researches any city in seconds.
+          </p>
+
+          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
+            <Link href="/auth" style={{
+              padding: '12px 32px', background: 'var(--accent)', color: '#000',
+              borderRadius: 10, fontWeight: 700, fontSize: '0.95rem',
+              boxShadow: '0 4px 20px rgba(245,158,11,0.25)', transition: 'background 0.15s',
+            }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--accent-hover)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'var(--accent)'}
+            >Sign in →</Link>
+            <Link href="/explore" style={{
+              padding: '12px 22px', background: 'transparent', color: 'var(--text-secondary)',
+              borderRadius: 10, fontWeight: 600, fontSize: '0.9rem',
+              border: '1px solid var(--border)', transition: 'border-color 0.15s, color 0.15s',
+            }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+            >Browse cities</Link>
+          </div>
+          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Free forever · No credit card required</p>
+
+          {/* Feature hints */}
+          <div style={{
+            marginTop: 48, display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14,
+          }}>
+            {[
+              { icon: '✦', label: 'AI research', desc: 'Any city, 20 scored spots in seconds' },
+              { icon: '🗺️', label: 'Map view', desc: 'Pins colour-coded by hiddenness' },
+              { icon: '📅', label: 'Day plans', desc: 'Morning · Afternoon · Evening slots' },
+            ].map(f => (
+              <div key={f.label} style={{
+                padding: '16px 12px', background: 'var(--card)',
+                border: '1px solid var(--border)', borderRadius: 14, textAlign: 'center',
+              }}>
+                <div style={{ fontSize: '1.4rem', marginBottom: 8 }}>{f.icon}</div>
+                <p style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: 4 }}>{f.label}</p>
+                <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>{f.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+/* ── Dashboard (signed in) ──────────────────────────────────────────────────── */
 function Dashboard({ user }) {
   const { trips, loading } = useTrips();
   const firstName = user?.email?.split('@')[0] ?? 'there';
@@ -75,7 +151,7 @@ function Dashboard({ user }) {
           </Link>
           <Link href="/explore" style={{
             display: 'flex', alignItems: 'center', gap: 8,
-            padding: '10px 20px', background: 'var(--card)', color: 'var(--text-secondary)',
+            padding: '10px 20px', background: 'transparent', color: 'var(--text-secondary)',
             borderRadius: 10, fontWeight: 600, fontSize: '0.875rem', textDecoration: 'none',
             border: '1px solid var(--border)', transition: 'border-color 0.15s, color 0.15s',
           }}
@@ -106,7 +182,7 @@ function Dashboard({ user }) {
             <div>
               <h2 style={{ fontSize: '1.3rem', fontWeight: 700, marginBottom: 8 }}>No trips yet</h2>
               <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: 1.7, maxWidth: 340 }}>
-                Plan your next adventure. Our AI surfaces hidden gems that tourists miss.
+                Plan your next adventure. AI surfaces hidden gems that tourists miss.
               </p>
             </div>
             <Link href="/trips/new" style={{
@@ -150,7 +226,8 @@ function Dashboard({ user }) {
 /* ── Root ───────────────────────────────────────────────────────────────────── */
 export default function RootPage() {
   const { user, loading } = useAuth();
-  if (loading && !user) return <LandingPage />;
-  if (!user) return <LandingPage />;
+  // While Firebase confirms the session, show the guest home (avoids landing page flash)
+  if (loading) return <GuestHome />;
+  if (!user)   return <GuestHome />;
   return <Dashboard user={user} />;
 }

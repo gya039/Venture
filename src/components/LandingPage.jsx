@@ -197,7 +197,7 @@ export default function LandingPage() {
         borderBottom: '1px solid var(--border)',
       }}>
         {/* Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none' }}>
           <div style={{
             width: 30, height: 30, borderRadius: 8,
             background: 'linear-gradient(135deg, #f59e0b, #f97316)',
@@ -205,7 +205,7 @@ export default function LandingPage() {
             fontWeight: 800, color: '#000', fontSize: '1rem', flexShrink: 0,
           }}>V</div>
           <span style={{ fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.02em', color: 'var(--text-primary)' }}>Venture</span>
-        </div>
+        </Link>
 
         {/* Center */}
         <Link href="/explore" style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', fontWeight: 500, display: 'none' }}>
