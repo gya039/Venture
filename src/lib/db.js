@@ -83,37 +83,52 @@ export async function updateUserPrefs(uid, prefs) {
 
 /**
  * Assemble trips + destinations into the shape the UI expects.
- * Internal helper — used by both getTrips and the real-time listener.
+ * Accepts a pre-fetched destinations map (tripId → dest[]) to avoid N+1 queries.
  */
-async function assembleTrips(tripDocs) {
-  return Promise.all(
-    tripDocs.map(async (tripSnap) => {
-      const trip = { id: tripSnap.id, ...tripSnap.data() };
+function assembleTripsSync(tripDocs, destsByTripId) {
+  return tripDocs.map((tripSnap) => {
+    const trip = { id: tripSnap.id, ...tripSnap.data() };
+    const destinations = (destsByTripId[trip.id] ?? [])
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+    return {
+      id:          trip.id,
+      name:        trip.name ?? null,
+      isMultiCity: trip.isMultiCity ?? false,
+      interests:   trip.interests ?? [],
+      createdAt:   toISO(trip.createdAt),
+      destinations,
+    };
+  });
+}
 
-      // Fetch destinations for this trip, sorted by sortOrder
-      const destQ = query(
-        collection(db, 'destinations'),
-        where('tripId', '==', trip.id),
-        orderBy('sortOrder', 'asc')
-      );
-      const destSnaps = await getDocs(destQ);
-      const destinations = destSnaps.docs.map((d) => ({
-        id: d.id,
-        ...d.data(),
-        startDate: toISO(d.data().startDate),
-        endDate:   toISO(d.data().endDate),
-      }));
+/**
+ * Fetch destinations for a known list of tripIds in ONE query.
+ * Returns a map of { tripId: [dest, ...] }
+ */
+async function fetchDestsForTrips(tripIds) {
+  if (!tripIds.length) return {};
+  // Firestore 'in' supports up to 30 values; chunk if needed
+  const chunks = [];
+  for (let i = 0; i < tripIds.length; i += 30) chunks.push(tripIds.slice(i, i + 30));
 
-      return {
-        id:          trip.id,
-        name:        trip.name ?? null,
-        isMultiCity: trip.isMultiCity ?? false,
-        interests:   trip.interests ?? [],
-        createdAt:   toISO(trip.createdAt),
-        destinations,
-      };
+  const map = {};
+  await Promise.all(
+    chunks.map(async (chunk) => {
+      const q = query(collection(db, 'destinations'), where('tripId', 'in', chunk));
+      const snaps = await getDocs(q);
+      snaps.docs.forEach((d) => {
+        const data = d.data();
+        const dest = {
+          id: d.id, ...data,
+          startDate: toISO(data.startDate),
+          endDate:   toISO(data.endDate),
+        };
+        if (!map[data.tripId]) map[data.tripId] = [];
+        map[data.tripId].push(dest);
+      });
     })
   );
+  return map;
 }
 
 /**
@@ -122,12 +137,13 @@ async function assembleTrips(tripDocs) {
 export async function getTrip(tripId) {
   const snap = await getDoc(doc(db, 'trips', tripId));
   if (!snap.exists()) return null;
-  const [trip] = await assembleTrips([snap]);
-  return trip;
+  const destsMap = await fetchDestsForTrips([tripId]);
+  return assembleTripsSync([snap], destsMap)[0];
 }
 
 /**
  * One-time fetch of all trips for a user (sorted soonest first).
+ * Uses 2 Firestore queries total instead of N+1.
  */
 export async function getTrips(userId) {
   const q = query(
@@ -136,11 +152,14 @@ export async function getTrips(userId) {
     orderBy('firstStartDate', 'asc')
   );
   const snaps = await getDocs(q);
-  return assembleTrips(snaps.docs);
+  const tripIds = snaps.docs.map((d) => d.id);
+  const destsMap = await fetchDestsForTrips(tripIds);
+  return assembleTripsSync(snaps.docs, destsMap);
 }
 
 /**
  * Real-time listener — calls onUpdate(trips[]) whenever trips change.
+ * Uses 2 Firestore queries total instead of N+1.
  * Returns the unsubscribe function.
  */
 export function listenTrips(userId, onUpdate, onError) {
@@ -153,8 +172,9 @@ export function listenTrips(userId, onUpdate, onError) {
     q,
     async (snap) => {
       try {
-        const trips = await assembleTrips(snap.docs);
-        onUpdate(trips);
+        const tripIds = snap.docs.map((d) => d.id);
+        const destsMap = await fetchDestsForTrips(tripIds);
+        onUpdate(assembleTripsSync(snap.docs, destsMap));
       } catch (err) {
         onError?.(err);
       }

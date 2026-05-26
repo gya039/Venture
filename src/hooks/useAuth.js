@@ -35,11 +35,12 @@ export function useAuth() {
       setLoading(false);
     }, 5000);
 
-    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+    const unsub = onAuthStateChanged(auth, (firebaseUser) => {
       clearTimeout(timeout);
       if (firebaseUser) {
         try { localStorage.setItem(CACHE_KEY, firebaseUser.uid); } catch {}
-        try { await upsertUser(firebaseUser.uid, firebaseUser.email); } catch {}
+        // Fire-and-forget — don't block the UI waiting for Firestore upsert
+        upsertUser(firebaseUser.uid, firebaseUser.email).catch(() => {});
         setUser(firebaseUser);
       } else {
         try { localStorage.removeItem(CACHE_KEY); } catch {}
