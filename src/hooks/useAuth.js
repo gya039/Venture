@@ -5,30 +5,28 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { upsertUser } from '@/lib/db';
 
-/**
- * useAuth — returns { user, loading } where user is a Firebase User or null.
- * Also ensures a Firestore user document exists on every sign-in.
- */
 export function useAuth() {
-  const [user,    setUser]    = useState(undefined); // undefined = still loading
+  const [user,    setUser]    = useState(undefined);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!auth) {
-      // No Firebase config (dev without .env.local)
       setUser(null);
       setLoading(false);
       return;
     }
 
+    // Hard 3s timeout — never spin forever if Firebase is slow
+    const timeout = setTimeout(() => {
+      setUser(null);
+      setLoading(false);
+    }, 3000);
+
     const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+      clearTimeout(timeout);
       if (firebaseUser) {
-        // Ensure Firestore user doc exists (no-op if already there)
-        try {
-          await upsertUser(firebaseUser.uid, firebaseUser.email);
-        } catch (err) {
-          console.warn('upsertUser failed:', err.message);
-        }
+        try { await upsertUser(firebaseUser.uid, firebaseUser.email); }
+        catch {}
         setUser(firebaseUser);
       } else {
         setUser(null);
@@ -36,7 +34,7 @@ export function useAuth() {
       setLoading(false);
     });
 
-    return unsub;
+    return () => { clearTimeout(timeout); unsub(); };
   }, []);
 
   return { user, loading };
