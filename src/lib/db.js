@@ -103,9 +103,11 @@ function assembleTripsSync(tripDocs, destsByTripId) {
 
 /**
  * Fetch destinations for a known list of tripIds in ONE query.
+ * userId MUST be provided — Firestore security rules require the query
+ * to include a userId filter so it only returns documents the user can read.
  * Returns a map of { tripId: [dest, ...] }
  */
-async function fetchDestsForTrips(tripIds) {
+async function fetchDestsForTrips(tripIds, userId) {
   if (!tripIds.length) return {};
   // Firestore 'in' supports up to 30 values; chunk if needed
   const chunks = [];
@@ -114,7 +116,11 @@ async function fetchDestsForTrips(tripIds) {
   const map = {};
   await Promise.all(
     chunks.map(async (chunk) => {
-      const q = query(collection(db, 'destinations'), where('tripId', 'in', chunk));
+      const q = query(
+        collection(db, 'destinations'),
+        where('tripId', 'in', chunk),
+        where('userId', '==', userId),   // required: aligns with security rule
+      );
       const snaps = await getDocs(q);
       snaps.docs.forEach((d) => {
         const data = d.data();
@@ -137,7 +143,8 @@ async function fetchDestsForTrips(tripIds) {
 export async function getTrip(tripId) {
   const snap = await getDoc(doc(db, 'trips', tripId));
   if (!snap.exists()) return null;
-  const destsMap = await fetchDestsForTrips([tripId]);
+  const userId = snap.data().userId;           // needed for security-rule-aligned query
+  const destsMap = await fetchDestsForTrips([tripId], userId);
   return assembleTripsSync([snap], destsMap)[0];
 }
 
@@ -153,7 +160,7 @@ export async function getTrips(userId) {
   );
   const snaps = await getDocs(q);
   const tripIds = snaps.docs.map((d) => d.id);
-  const destsMap = await fetchDestsForTrips(tripIds);
+  const destsMap = await fetchDestsForTrips(tripIds, userId);
   return assembleTripsSync(snaps.docs, destsMap);
 }
 
@@ -173,7 +180,7 @@ export function listenTrips(userId, onUpdate, onError) {
     async (snap) => {
       try {
         const tripIds = snap.docs.map((d) => d.id);
-        const destsMap = await fetchDestsForTrips(tripIds);
+        const destsMap = await fetchDestsForTrips(tripIds, userId);
         onUpdate(assembleTripsSync(snap.docs, destsMap));
       } catch (err) {
         onError?.(err);
