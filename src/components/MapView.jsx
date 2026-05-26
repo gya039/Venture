@@ -30,6 +30,8 @@ export default function MapView({ spots = [], centerLat, centerLng, onSpotClick,
     if (mapRef.current)           return;
 
     let map;
+    let resizeObs;
+
     import('mapbox-gl').then(({ default: mapboxgl }) => {
       mapboxgl.accessToken = TOKEN;
 
@@ -43,10 +45,26 @@ export default function MapView({ spots = [], centerLat, centerLng, onSpotClick,
 
       map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right');
       map.addControl(new mapboxgl.AttributionControl({ compact: true }),    'bottom-right');
-      map.on('load', () => { mapRef.current = map; setReady(true); });
+
+      map.on('load', () => {
+        // Force Mapbox to recalculate its size after CSS flex has settled.
+        // Without this, the map thinks it's 0×0 and all markers land at the
+        // top-left corner until the first user interaction triggers a resize.
+        map.resize();
+        mapRef.current = map;
+        setReady(true);
+      });
+
+      // Keep map size in sync whenever the flex container resizes
+      // (e.g. sidebar collapse, filter panel expanding, window resize)
+      if (containerRef.current && typeof ResizeObserver !== 'undefined') {
+        resizeObs = new ResizeObserver(() => { mapRef.current?.resize(); });
+        resizeObs.observe(containerRef.current);
+      }
     }).catch(() => setMapErr('load-failed'));
 
     return () => {
+      resizeObs?.disconnect();
       markersRef.current.forEach(m => m.remove());
       markersRef.current = [];
       map?.remove();

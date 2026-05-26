@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/hooks/useAuth';
@@ -118,16 +118,25 @@ export default function TripDetailPage() {
   // Reset filter + selection on dest change
   useEffect(() => { setFilterInterest(''); setSelectedSpotId(null); }, [selectedDest?.id]);
 
-  /* ── Derived ────────────────────────────────────────────────────────────── */
-  const filteredSpots = filterInterest
-    ? spots.filter((s) => (s.interests ?? []).includes(filterInterest))
-    : spots;
+  /* ── Derived (memoised — stable refs prevent MapView marker re-creation) ─── */
+  const filteredSpots = useMemo(
+    () => filterInterest
+      ? spots.filter((s) => (s.interests ?? []).includes(filterInterest))
+      : spots,
+    [spots, filterInterest]
+  );
 
-  const presentInterests = INTERESTS.filter((i) =>
-    spots.some((s) => (s.interests ?? []).includes(i.id))
+  const presentInterests = useMemo(
+    () => INTERESTS.filter((i) => spots.some((s) => (s.interests ?? []).includes(i.id))),
+    [spots]
   );
 
   const selectedSpot = spots.find(s => s.id === selectedSpotId) ?? null;
+
+  const handleSpotClick = useCallback(
+    (spot) => setSelectedSpotId(spot.id),
+    [] // setSelectedSpotId is stable
+  );
 
   /* ── Loading / error shell ──────────────────────────────────────────────── */
   if (tripLoading || !authReady) {
@@ -410,7 +419,7 @@ export default function TripDetailPage() {
               <div style={{ flex: 1, position: 'relative', background: '#0a0a0a', minWidth: 0 }}>
                 <MapView
                   spots={filteredSpots}
-                  onSpotClick={(spot) => setSelectedSpotId(spot.id)}
+                  onSpotClick={handleSpotClick}
                   filterInterest=""
                   focusSpotId={selectedSpotId}
                 />
