@@ -30,7 +30,6 @@ export default function MapView({ spots = [], centerLat, centerLng, onSpotClick,
     if (mapRef.current)           return;
 
     let map;
-    let resizeObs;
 
     import('mapbox-gl').then(({ default: mapboxgl }) => {
       mapboxgl.accessToken = TOKEN;
@@ -50,8 +49,6 @@ export default function MapView({ spots = [], centerLat, centerLng, onSpotClick,
         mapRef.current = map;
         // Double rAF: first lets the browser finish the flex layout pass,
         // second lets Mapbox's own rAF queue drain before we place markers.
-        // Without this, the map canvas can report 0×0 and all markers
-        // land at top-left until the user triggers a zoom/pan.
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             map.resize();
@@ -60,21 +57,20 @@ export default function MapView({ spots = [], centerLat, centerLng, onSpotClick,
         });
       });
 
-      // Debounced ResizeObserver — avoids calling resize() during transient
-      // flex-layout changes (hover state, filter chips expanding, etc.)
-      // that would snap all markers back to top-left mid-render.
-      if (containerRef.current && typeof ResizeObserver !== 'undefined') {
-        let resizeTimer;
-        resizeObs = new ResizeObserver(() => {
-          clearTimeout(resizeTimer);
-          resizeTimer = setTimeout(() => { mapRef.current?.resize(); }, 50);
-        });
-        resizeObs.observe(containerRef.current);
-      }
+      // Only resize on actual window resize — NOT on internal layout changes.
+      // A ResizeObserver on the container fires during hover/filter transitions
+      // and can call resize() when the container is in a transient 0-size state,
+      // which sets the Mapbox canvas to 0×0 and snaps all markers to top-left.
+      const handleWindowResize = () => { mapRef.current?.resize(); };
+      window.addEventListener('resize', handleWindowResize);
+
+      // Store cleanup ref so the return fn can remove the listener
+      map._ventureResizeCleanup = () => window.removeEventListener('resize', handleWindowResize);
+
     }).catch(() => setMapErr('load-failed'));
 
     return () => {
-      resizeObs?.disconnect();
+      mapRef.current?._ventureResizeCleanup?.();
       markersRef.current.forEach(m => m.remove());
       markersRef.current = [];
       map?.remove();
@@ -86,8 +82,8 @@ export default function MapView({ spots = [], centerLat, centerLng, onSpotClick,
   const onSpotClickRef = useRef(onSpotClick);
   useEffect(() => { onSpotClickRef.current = onSpotClick; });
 
-  // Store spot→element map so we can highlight the focused pin
-  const markerElemsRef = useRef({}); // spotId → DOM element
+  // Store inner element map so we can update focus highlight without recreating markers
+  const innerElemsRef = useRef({}); // spotId → inner DOM element
 
   /* ── Update markers ───────────────────────────────────────────────────── */
   useEffect(() => {
@@ -97,7 +93,7 @@ export default function MapView({ spots = [], centerLat, centerLng, onSpotClick,
     import('mapbox-gl').then(({ default: mapboxgl }) => {
       markersRef.current.forEach(m => m.remove());
       markersRef.current = [];
-      markerElemsRef.current = {};
+      innerElemsRef.current = {};
 
       const visible = filterInterest
         ? spots.filter(s => (s.interests ?? []).includes(filterInterest))
@@ -105,40 +101,57 @@ export default function MapView({ spots = [], centerLat, centerLng, onSpotClick,
 
       visible.forEach(spot => {
         if (!spot.lat || !spot.lng || spot.coordsMissing) return;
-        const level = getHiddennessLevel(spot.hiddennessScore ?? 1);
+        const level    = getHiddennessLevel(spot.hiddennessScore ?? 1);
         const isFocused = spot.id === focusSpotId;
+        const size     = isFocused ? 34 : 26;
 
+        // ── Outer element ─────────────────────────────────────────────────
+        // Mapbox GL positions markers by setting `transform: translate3d(x,y,0)`
+        // on this element. NEVER set `transform` here — it overrides the
+        // positioning transform and sends every marker to (0,0) top-left.
         const el = document.createElement('div');
         Object.assign(el.style, {
-          width:        isFocused ? '34px' : '26px',
-          height:       isFocused ? '34px' : '26px',
-          borderRadius: '50%',
-          background:   level.color,
-          border:       isFocused ? '2px solid #fff' : '2px solid rgba(0,0,0,0.4)',
-          boxShadow:    isFocused
+          width:      size + 'px',
+          height:     size + 'px',
+          cursor:     'pointer',
+          userSelect: 'none',
+          zIndex:     isFocused ? '10' : '1',
+        });
+
+        // ── Inner element ─────────────────────────────────────────────────
+        // All visual styling lives here. Scale animation goes on `inner`,
+        // never on `el`, so hover effects never touch Mapbox's transform.
+        const inner = document.createElement('div');
+        Object.assign(inner.style, {
+          width:          '100%',
+          height:         '100%',
+          borderRadius:   '50%',
+          background:     level.color,
+          border:         isFocused ? '2px solid #fff' : '2px solid rgba(0,0,0,0.4)',
+          boxShadow:      isFocused
             ? `0 0 0 3px ${level.color}60, 0 0 18px ${level.color}80, 0 2px 8px rgba(0,0,0,0.5)`
             : `0 0 8px ${level.color}60, 0 2px 4px rgba(0,0,0,0.4)`,
-          cursor:       'pointer',
-          display:      'flex',
-          alignItems:   'center',
+          display:        'flex',
+          alignItems:     'center',
           justifyContent: 'center',
-          fontSize:     isFocused ? '11px' : '10px',
-          fontWeight:   '700',
-          color:        '#000',
-          transition:   'all 0.2s ease',
-          userSelect:   'none',
-          zIndex:       isFocused ? '10' : '1',
+          fontSize:       isFocused ? '11px' : '10px',
+          fontWeight:     '700',
+          color:          '#000',
+          transition:     'transform 0.15s ease, box-shadow 0.15s ease',
+          pointerEvents:  'none', // let the outer el handle click/hover
         });
-        el.textContent  = spot.hiddennessScore;
-        el.onmouseenter = () => { if (spot.id !== focusSpotId) el.style.transform = 'scale(1.3)'; };
-        el.onmouseleave = () => { if (spot.id !== focusSpotId) el.style.transform = 'scale(1)'; };
+        inner.textContent = spot.hiddennessScore;
+        el.appendChild(inner);
+
+        el.onmouseenter = () => { inner.style.transform = 'scale(1.25)'; };
+        el.onmouseleave = () => { inner.style.transform = 'scale(1)'; };
         el.onclick      = () => onSpotClickRef.current?.(spot);
 
-        const marker = new mapboxgl.Marker({ element: el })
+        const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })
           .setLngLat([spot.lng, spot.lat])
           .addTo(map);
         markersRef.current.push(marker);
-        markerElemsRef.current[spot.id] = el;
+        innerElemsRef.current[spot.id] = inner;
       });
 
       // Fit bounds to all visible spots (only on initial load, not focus change)
@@ -171,7 +184,7 @@ export default function MapView({ spots = [], centerLat, centerLng, onSpotClick,
   /* ── Error / loading states ───────────────────────────────────────────── */
   if (mapErr === 'no-token') {
     return (
-      <div style={{ width:'100%', height:'100%', background:'#111', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:14, padding:24, textAlign:'center' }}>
+      <div style={{ position:'absolute', inset:0, background:'#111', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:14, padding:24, textAlign:'center' }}>
         <span style={{ fontSize:'2.5rem' }}>🗺️</span>
         <p style={{ color:'#f5f5f5', fontWeight:600 }}>Mapbox token needed</p>
         <p style={{ color:'#555', fontSize:'0.82rem', maxWidth:280, lineHeight:1.65 }}>
@@ -188,8 +201,7 @@ export default function MapView({ spots = [], centerLat, centerLng, onSpotClick,
   // Both wrapper and container use position:absolute inset:0.
   // This fills the nearest positioned ancestor (the flex panel with
   // position:relative in the trips page) without relying on CSS height
-  // inheritance through flex children — which is the source of the
-  // "markers snap to top-left on hover" glitch.
+  // inheritance through flex children.
   return (
     <div style={{ position:'absolute', inset:0 }}>
       <div ref={containerRef} style={{ position:'absolute', inset:0 }} />
