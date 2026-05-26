@@ -54,6 +54,10 @@ export default function MapView({ spots = [], centerLat, centerLng, onSpotClick,
     };
   }, []); // eslint-disable-line
 
+  // Keep onSpotClick in a ref so changing the callback never re-creates markers
+  const onSpotClickRef = useRef(onSpotClick);
+  useEffect(() => { onSpotClickRef.current = onSpotClick; });
+
   // Store spot→element map so we can highlight the focused pin
   const markerElemsRef = useRef({}); // spotId → DOM element
 
@@ -100,7 +104,7 @@ export default function MapView({ spots = [], centerLat, centerLng, onSpotClick,
         el.textContent  = spot.hiddennessScore;
         el.onmouseenter = () => { if (spot.id !== focusSpotId) el.style.transform = 'scale(1.3)'; };
         el.onmouseleave = () => { if (spot.id !== focusSpotId) el.style.transform = 'scale(1)'; };
-        el.onclick      = () => onSpotClick?.(spot);
+        el.onclick      = () => onSpotClickRef.current?.(spot);
 
         const marker = new mapboxgl.Marker({ element: el })
           .setLngLat([spot.lng, spot.lat])
@@ -125,7 +129,7 @@ export default function MapView({ spots = [], centerLat, centerLng, onSpotClick,
         }
       }
     });
-  }, [spots, ready, filterInterest, onSpotClick]); // eslint-disable-line
+  }, [spots, ready, filterInterest]); // eslint-disable-line — onSpotClick intentionally via ref
 
   /* ── Fly to focused spot ──────────────────────────────────────────────── */
   useEffect(() => {

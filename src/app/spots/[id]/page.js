@@ -438,7 +438,6 @@ export default function SpotDetailPage() {
         </div>
       )}
 
-      </div>
     </div>
   );
 }
